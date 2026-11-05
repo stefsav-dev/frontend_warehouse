@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useAuthSession, useLogoutMutation } from "@/hooks/use-auth-query";
 import {
   useComboboxCategories,
@@ -711,7 +712,7 @@ export default function IncomingItemFormPage({
                   </h2>
                 </div>
 
-                <div className="p-5 overflow-x-auto">
+                <div className="p-5 overflow-x-auto min-h-[360px] pb-32">
                   {/* Header Kolom Barang */}
                   <div className="min-w-[760px] grid grid-cols-12 gap-3 pb-2 text-xs font-medium text-slate-700 dark:text-zinc-300">
                     <div className="col-span-3">Nama Barang</div>
@@ -752,18 +753,19 @@ export default function IncomingItemFormPage({
                           {/* 2. Harga (Rp.) */}
                           <div className="col-span-2 relative">
                             <Input
-                              type="number"
-                              min="0"
+                              type="text"
+                              inputMode="numeric"
                               placeholder="0"
-                              value={it.price}
-                              onChange={(e) =>
+                              value={it.price === "" ? "" : formatNumber(Number(it.price))}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/\D/g, "");
                                 handleItemChange(
                                   it.id,
                                   "price",
-                                  e.target.value === "" ? "" : Number(e.target.value)
-                                )
-                              }
-                              className={`h-8 text-xs pr-7 ${
+                                  raw === "" ? "" : Number(raw)
+                                );
+                              }}
+                              className={`h-8 text-xs pr-7 text-right ${
                                 isExceedLimit
                                   ? "border-rose-500 focus-visible:ring-rose-500"
                                   : ""
@@ -822,13 +824,13 @@ export default function IncomingItemFormPage({
 
                           {/* 6. Tgl. Ekspired */}
                           <div className="col-span-2">
-                            <Input
-                              type="date"
+                            <DatePicker
                               value={it.expiredDate}
-                              onChange={(e) =>
-                                handleItemChange(it.id, "expiredDate", e.target.value)
+                              onChange={(val) =>
+                                handleItemChange(it.id, "expiredDate", val)
                               }
-                              className="h-8 text-xs"
+                              placeholder="Pilih tanggal..."
+                              align="right"
                             />
                           </div>
 

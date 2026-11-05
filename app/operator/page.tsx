@@ -992,10 +992,14 @@ export default function OperatorPage() {
                   </Label>
                   <Input
                     id="in-price"
-                    type="number"
-                    min="0"
-                    value={itemPrice || ""}
-                    onChange={(e) => setItemPrice(Math.max(0, Number(e.target.value)))}
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={itemPrice ? new Intl.NumberFormat("id-ID").format(itemPrice) : ""}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      setItemPrice(raw === "" ? 0 : Number(raw));
+                    }}
                     className={`h-8 text-xs ${
                       isOverPriceLimit ? "border-rose-500 focus-visible:ring-rose-500" : ""
                     }`}
