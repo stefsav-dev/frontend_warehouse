@@ -212,7 +212,7 @@ export async function loginUser(credentials: {
       success: false,
       message:
         error?.message?.includes("fetch") || error?.message?.includes("Failed")
-          ? "Gagal terhubung ke server backend (http://localhost:3001). Pastikan service backend aktif."
+          ? `Gagal terhubung ke server backend (${API_BASE_URL}). Pastikan service backend aktif.`
           : error?.message || "Terjadi kesalahan saat memproses login.",
     };
   }
