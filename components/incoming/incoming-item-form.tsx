@@ -50,6 +50,11 @@ function formatNumber(val: number): string {
   return new Intl.NumberFormat("id-ID").format(val);
 }
 
+function formatRupiah(val: number): string {
+  if (isNaN(val) || val === null || val === undefined) return "Rp 0";
+  return "Rp " + new Intl.NumberFormat("id-ID").format(val);
+}
+
 export default function IncomingItemFormPage({
   roleContext,
 }: {
@@ -144,6 +149,26 @@ export default function IncomingItemFormPage({
     (s: any) => s.id === subCategoryId
   );
   const priceLimitNum = selectedSub ? Number(selectedSub.priceLimit) : 0;
+
+  // Akumulasi grand total seluruh baris barang
+  const grandTotal = items.reduce((sum, it) => {
+    const p = Number(it.price || 0);
+    const q = Number(it.quantity || 0);
+    return sum + p * q;
+  }, 0);
+
+  // Cek apakah ada baris yang totalnya (atau harga satuannya) melebihi batas harga
+  const hasRowExceed =
+    priceLimitNum > 0 &&
+    items.some((it) => {
+      const p = Number(it.price || 0);
+      const q = Number(it.quantity || 0);
+      return p * q > priceLimitNum || p > priceLimitNum;
+    });
+
+  // Cek apakah grand total melebihi batas harga (termasuk kalau ada barang di bawahnya lagi)
+  const isGrandTotalExceed = priceLimitNum > 0 && grandTotal > priceLimitNum;
+  const isLimitExceeded = isGrandTotalExceed || hasRowExceed;
 
   // File upload handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,15 +282,6 @@ export default function IncomingItemFormPage({
         });
         return;
       }
-      if (priceLimitNum > 0 && priceNum > priceLimitNum) {
-        setFeedback({
-          type: "error",
-          text: `Harga barang '${it.itemName}' (Rp ${formatNumber(
-            priceNum
-          )}) melebihi Batas Harga sub kategori (Rp ${formatNumber(priceLimitNum)}).`,
-        });
-        return;
-      }
       const qtyNum = Number(it.quantity || 0);
       if (qtyNum < 1) {
         setFeedback({
@@ -274,6 +290,22 @@ export default function IncomingItemFormPage({
         });
         return;
       }
+      const rowTotal = priceNum * qtyNum;
+      if (priceLimitNum > 0 && (rowTotal > priceLimitNum || priceNum > priceLimitNum)) {
+        setFeedback({
+          type: "error",
+          text: `Total barang '${it.itemName}' (${formatRupiah(rowTotal)}) melebihi Batas Harga sub kategori (${formatRupiah(priceLimitNum)}).`,
+        });
+        return;
+      }
+    }
+
+    if (priceLimitNum > 0 && grandTotal > priceLimitNum) {
+      setFeedback({
+        type: "error",
+        text: `Total akumulasi seluruh barang (${formatRupiah(grandTotal)}) melebihi Batas Harga sub kategori (${formatRupiah(priceLimitNum)}). Formulir tidak dapat disimpan.`,
+      });
+      return;
     }
 
     setIsSubmitting(true);
@@ -743,7 +775,9 @@ export default function IncomingItemFormPage({
                       const priceNum = Number(it.price || 0);
                       const qtyNum = Number(it.quantity || 0);
                       const totalNum = priceNum * qtyNum;
-                      const isExceedLimit = priceLimitNum > 0 && priceNum > priceLimitNum;
+                      const isRowExceed =
+                        priceLimitNum > 0 &&
+                        (totalNum > priceLimitNum || priceNum > priceLimitNum);
 
                       return (
                         <div
@@ -779,8 +813,8 @@ export default function IncomingItemFormPage({
                                 );
                               }}
                               className={`h-8 text-xs pr-7 text-right ${
-                                isExceedLimit
-                                  ? "border-rose-500 focus-visible:ring-rose-500"
+                                isRowExceed
+                                  ? "border-rose-500 focus-visible:ring-rose-500 text-rose-600 font-semibold"
                                   : ""
                               }`}
                               required
@@ -828,7 +862,11 @@ export default function IncomingItemFormPage({
                               readOnly
                               disabled
                               placeholder="0"
-                              className="h-8 text-xs bg-zinc-50 dark:bg-zinc-800/50 pr-7 font-medium"
+                              className={`h-8 text-xs pr-7 font-medium ${
+                                isRowExceed
+                                  ? "border-rose-500 bg-rose-50/50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400 font-semibold"
+                                  : "bg-zinc-50 dark:bg-zinc-800/50"
+                              }`}
                             />
                             <span className="absolute right-2.5 top-2 text-[10px] text-zinc-400 pointer-events-none">
                               Rp.
@@ -869,13 +907,65 @@ export default function IncomingItemFormPage({
                               </button>
                             )}
                           </div>
+
+                          {/* Peringatan jika baris melebihi batas harga */}
+                          {isRowExceed && (
+                            <div className="col-span-12 -mt-1 pb-1">
+                              <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium pl-1">
+                                <AlertCircle className="h-3 w-3 shrink-0" />
+                                Total barang &quot;{it.itemName || `Baris ${idx + 1}`}&quot; ({formatRupiah(totalNum)}) melebihi Batas Harga ({formatRupiah(priceLimitNum)})
+                              </p>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
+
+                    {/* Ringkasan Akumulasi Total Seluruh Barang & Pagu Batas Harga */}
+                    <div className="mt-4 p-3 rounded-lg border bg-zinc-50 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-zinc-500">Batas Harga Sub Kategori:</span>
+                        <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                          {priceLimitNum > 0 ? formatRupiah(priceLimitNum) : "Tidak dibatasi"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs">
+                        <span className="text-zinc-500">Total Akumulasi Semua Barang:</span>
+                        <span
+                          className={`text-sm font-bold ${
+                            isGrandTotalExceed
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-emerald-600 dark:text-emerald-400"
+                          }`}
+                        >
+                          {formatRupiah(grandTotal)}
+                        </span>
+                        {isGrandTotalExceed && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300">
+                            Melebihi Batas Harga
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Warning Alert jika total melebihi batas harga */}
+            {isLimitExceeded && (
+              <Alert variant="destructive" className="py-2.5 text-xs">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <AlertDescription>
+                    {isGrandTotalExceed
+                      ? `Total akumulasi seluruh barang (${formatRupiah(grandTotal)}) melebihi Batas Harga sub kategori (${formatRupiah(priceLimitNum)}). Silakan sesuaikan jumlah atau harga satuan agar dapat disimpan.`
+                      : `Terdapat baris barang yang totalnya melebihi Batas Harga sub kategori (${formatRupiah(priceLimitNum)}). Silakan kurangi harga atau kuantitas barang.`}
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
 
             {/* 3. TOMBOL AKSI DI BAWAH (Kembali & Simpan) */}
             <div className="flex items-center gap-3 pt-1">
@@ -893,8 +983,13 @@ export default function IncomingItemFormPage({
               <Button
                 type="submit"
                 size="sm"
-                disabled={isSubmitting || isUploading}
-                className="h-8 px-5 text-xs font-medium bg-[#24638a] hover:bg-[#1d5272] text-white"
+                disabled={isSubmitting || isUploading || isLimitExceeded}
+                title={isLimitExceeded ? "Total barang melebihi batas harga" : undefined}
+                className={`h-8 px-5 text-xs font-medium ${
+                  isLimitExceeded
+                    ? "bg-zinc-400 hover:bg-zinc-400 cursor-not-allowed opacity-60 text-white"
+                    : "bg-[#24638a] hover:bg-[#1d5272] text-white cursor-pointer"
+                }`}
               >
                 {isSubmitting ? (
                   <>

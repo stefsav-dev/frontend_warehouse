@@ -201,9 +201,10 @@ export default function OperatorPage() {
     (s: any) => s.id === subCategoryId
   );
   const priceLimitNum = selectedSub ? Number(selectedSub.priceLimit) : 0;
-  const isOverPriceLimit = priceLimitNum > 0 && itemPrice > priceLimitNum;
-
   const calculatedTotal = (quantity || 0) * (itemPrice || 0);
+  const isOverPriceLimit =
+    priceLimitNum > 0 &&
+    (calculatedTotal > priceLimitNum || (itemPrice || 0) > priceLimitNum);
 
   // Upload handler
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -239,7 +240,7 @@ export default function OperatorPage() {
     if (isOverPriceLimit) {
       setFeedback({
         type: "error",
-        text: `Harga satuan (${formatRupiah(itemPrice)}) melebihi batas harga sub kategori (${formatRupiah(priceLimitNum)}).`,
+        text: `Total harga barang (${formatRupiah(calculatedTotal)}) melebihi batas harga sub kategori (${formatRupiah(priceLimitNum)}).`,
       });
       return;
     }

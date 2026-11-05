@@ -308,6 +308,17 @@ export default function AdminPage() {
     editItemData.categoryId || undefined
   );
 
+  const selectedEditSub = comboboxSubCategories?.data?.find(
+    (s: any) => s.id === editItemData.subCategoryId
+  );
+  const editSubLimit = selectedEditSub ? Number(selectedEditSub.priceLimit) : 0;
+  const editPrice = Number(editItemData.price || 0);
+  const editQty = Number(editItemData.quantity || 1);
+  const editCalculatedTotal = editPrice * editQty;
+  const isEditOverLimit =
+    editSubLimit > 0 &&
+    (editCalculatedTotal > editSubLimit || editPrice > editSubLimit);
+
   const isDeleting =
     deleteUserMutation.isPending ||
     deleteCatMutation.isPending ||
@@ -797,9 +808,14 @@ export default function AdminPage() {
       (s: any) => s.id === editItemData.subCategoryId
     );
     if (selectedSub && Number(selectedSub.priceLimit) > 0) {
-      if (Number(editItemData.price) > Number(selectedSub.priceLimit)) {
+      const priceNum = Number(editItemData.price || 0);
+      const qtyNum = Number(editItemData.quantity || 1);
+      const totalNum = priceNum * qtyNum;
+      const subLimit = Number(selectedSub.priceLimit);
+
+      if (totalNum > subLimit || priceNum > subLimit) {
         setEditItemModalError(
-          `Harga satuan (${formatRupiah(Number(editItemData.price))}) melebihi batas harga sub kategori (${formatRupiah(Number(selectedSub.priceLimit))}).`
+          `Total harga barang (${formatRupiah(totalNum)}) melebihi batas harga sub kategori (${formatRupiah(subLimit)}).`
         );
         return;
       }
@@ -2766,10 +2782,29 @@ export default function AdminPage() {
               </div>
 
               {/* Row 5: Total Akumulasi (Readonly) */}
-              <div className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-                <span className="text-zinc-500 text-xs">Total Harga:</span>
-                <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
-                  {formatRupiah((editItemData.price || 0) * (editItemData.quantity || 1))}
+              <div
+                className={`p-2.5 rounded border flex justify-between items-center ${
+                  isEditOverLimit
+                    ? "bg-rose-50/50 border-rose-300 dark:bg-rose-950/20 dark:border-rose-900"
+                    : "bg-zinc-50 dark:bg-zinc-800/40 border-zinc-200 dark:border-zinc-800"
+                }`}
+              >
+                <div className="flex flex-col">
+                  <span className="text-zinc-500 text-xs">Total Harga:</span>
+                  {isEditOverLimit && (
+                    <span className="text-[11px] text-rose-600 font-medium">
+                      Melebihi batas pagu harga ({formatRupiah(editSubLimit)})
+                    </span>
+                  )}
+                </div>
+                <span
+                  className={`font-semibold text-sm ${
+                    isEditOverLimit
+                      ? "text-rose-600 dark:text-rose-400"
+                      : "text-zinc-900 dark:text-zinc-100"
+                  }`}
+                >
+                  {formatRupiah(editCalculatedTotal)}
                 </span>
               </div>
 
@@ -2813,7 +2848,7 @@ export default function AdminPage() {
                 type="submit"
                 size="sm"
                 className="h-8 text-xs"
-                disabled={updateItemMutation.isPending}
+                disabled={updateItemMutation.isPending || isEditOverLimit}
               >
                 {updateItemMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
               </Button>
