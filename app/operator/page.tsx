@@ -78,13 +78,19 @@ export default function OperatorPage() {
 
   // Sync activeTab from URL search params if provided (e.g. ?tab=overview)
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab");
-      if (tab && ["items", "overview"].includes(tab)) {
-        setActiveTab(tab as any);
+    const handleSyncTab = () => {
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get("tab");
+        if (tab && ["items", "overview"].includes(tab)) {
+          setActiveTab(tab as any);
+        }
       }
-    }
+    };
+
+    handleSyncTab();
+    window.addEventListener("popstate", handleSyncTab);
+    return () => window.removeEventListener("popstate", handleSyncTab);
   }, []);
 
   // Pagination & Limit States (5, 10, 25, 50, 100)
@@ -154,6 +160,13 @@ export default function OperatorPage() {
     year: selectedYearFilter || undefined,
     operatorId: session?.user?.role === "OPERATOR" ? session.user.id : undefined,
   });
+
+  // Refetch items when switching back to items tab
+  useEffect(() => {
+    if (activeTab === "items" && token) {
+      refetchItems();
+    }
+  }, [activeTab, token, refetchItems]);
 
   const { data: comboboxCategories } = useComboboxCategories(token);
   const { data: comboboxSubCategories } = useComboboxSubCategories(
@@ -382,6 +395,7 @@ export default function OperatorPage() {
                 onClick={() => {
                   setActiveTab(item.id);
                   setIsMobileMenuOpen(false);
+                  router.replace(`/operator?tab=${item.id}`);
                 }}
                 className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-xs font-medium transition-colors cursor-pointer text-left ${
                   isActive

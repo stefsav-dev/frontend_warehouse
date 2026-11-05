@@ -576,6 +576,11 @@ export default function IncomingItemFormPage({
                       required
                     >
                       <option value="">Pilih Operator...</option>
+                      {userRole === "OPERATOR" && session?.user && !operatorsData?.data?.some((op: any) => op.id === session.user.id) && (
+                        <option value={session.user.id}>
+                          {session.user.name} ({session.user.username})
+                        </option>
+                      )}
                       {operatorsData?.data?.map((op: any) => (
                         <option key={op.id} value={op.id}>
                           {op.name} ({op.username})
