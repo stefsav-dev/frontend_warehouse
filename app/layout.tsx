@@ -3,8 +3,11 @@ import "./globals.css";
 import { QueryProvider } from "@/components/providers/query-provider";
 
 export const metadata: Metadata = {
-  title: "Login - Warehouse App",
-  description: "Sistem Manajemen Pergudangan",
+  title: {
+    default: "Warehouse App",
+    template: "%s - Warehouse App",
+  },
+  description: "Sistem Manajemen Pergudangan & Barang Masuk",
 };
 
 export default function RootLayout({

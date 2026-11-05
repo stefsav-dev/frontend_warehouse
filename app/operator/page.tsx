@@ -93,6 +93,15 @@ export default function OperatorPage() {
     return () => window.removeEventListener("popstate", handleSyncTab);
   }, []);
 
+  // Update document title dynamically based on active tab
+  useEffect(() => {
+    if (activeTab === "items") {
+      document.title = "Pencatatan Barang Masuk - Warehouse App";
+    } else if (activeTab === "overview") {
+      document.title = "Ringkasan Operasional - Warehouse App";
+    }
+  }, [activeTab]);
+
   // Pagination & Limit States (5, 10, 25, 50, 100)
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(5);

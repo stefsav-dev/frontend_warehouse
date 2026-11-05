@@ -24,6 +24,10 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    document.title = "Masuk - Warehouse App";
+  }, []);
+
   const loginMutation = useLoginMutation();
   const isSubmitting = loginMutation.isPending;
 

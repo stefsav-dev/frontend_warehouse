@@ -114,6 +114,29 @@ export default function AdminPage() {
     }
   }, []);
 
+  // Update document title dynamically based on active tab
+  useEffect(() => {
+    switch (activeTab) {
+      case "overview":
+        document.title = "Ringkasan Sistem - Warehouse App";
+        break;
+      case "users":
+        document.title = "Manajemen Pengguna - Warehouse App";
+        break;
+      case "categories":
+        document.title = "Master Kategori - Warehouse App";
+        break;
+      case "subcategories":
+        document.title = "Master Sub Kategori - Warehouse App";
+        break;
+      case "items":
+        document.title = "Master Barang Masuk - Warehouse App";
+        break;
+      default:
+        document.title = "Admin - Warehouse App";
+    }
+  }, [activeTab]);
+
   // Pagination & Limits (5, 10, 25, 50, 100)
   const [userPage, setUserPage] = useState(1);
   const [userLimit, setUserLimit] = useState(5);

@@ -67,6 +67,14 @@ export default function IncomingItemFormPage({
     }
   }, [session, isSessionLoading, router]);
 
+  // Dynamic document title
+  useEffect(() => {
+    document.title =
+      roleContext === "ADMIN"
+        ? "Tambah Barang Masuk - Warehouse App"
+        : "Catat Barang Masuk - Warehouse App";
+  }, [roleContext]);
+
   // Sidebar mobile toggle
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
