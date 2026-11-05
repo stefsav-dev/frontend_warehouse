@@ -1,7 +1,26 @@
 /**
  * API Service Client untuk Warehouse App Frontend
- * Menghubungkan antarmuka shadcn/ui dengan Elysia.js Backend (http://localhost:3001)
  */
+
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    const custom = localStorage.getItem("warehouse_api_url");
+    if (custom && custom.trim()) {
+      return custom.trim().replace(/\/+$/, "");
+    }
+  }
+  return (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/+$/, "");
+}
+
+export function setCustomApiUrl(url: string | null) {
+  if (typeof window !== "undefined") {
+    if (!url || !url.trim()) {
+      localStorage.removeItem("warehouse_api_url");
+    } else {
+      localStorage.setItem("warehouse_api_url", url.trim().replace(/\/+$/, ""));
+    }
+  }
+}
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -74,7 +93,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<{
   };
 }> {
   try {
-    const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+    const res = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
@@ -196,7 +215,7 @@ export async function loginUser(credentials: {
   password: string;
 }): Promise<LoginResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${getApiBaseUrl()}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -212,7 +231,7 @@ export async function loginUser(credentials: {
       success: false,
       message:
         error?.message?.includes("fetch") || error?.message?.includes("Failed")
-          ? `Gagal terhubung ke server backend (${API_BASE_URL}). Pastikan service backend aktif.`
+          ? `Gagal terhubung ke server backend (${getApiBaseUrl()}). Pastikan service backend aktif.`
           : error?.message || "Terjadi kesalahan saat memproses login.",
     };
   }
@@ -221,7 +240,7 @@ export async function loginUser(credentials: {
 export async function logoutUser(refreshToken?: string | null): Promise<void> {
   try {
     if (refreshToken) {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
+      await fetch(`${getApiBaseUrl()}/auth/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -241,7 +260,7 @@ export async function fetchUserProfile(
 ): Promise<{ success: boolean; data?: User; message?: string }> {
   try {
     const response = await fetchWithAuth(
-      `${API_BASE_URL}/auth/me`,
+      `${getApiBaseUrl()}/auth/me`,
       {},
       accessToken
     );
@@ -261,7 +280,7 @@ export async function fetchUserProfile(
 
 export async function fetchAdminDashboard(token: string) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/admin/dashboard`,
+    `${getApiBaseUrl()}/admin/dashboard`,
     {},
     token
   );
@@ -272,7 +291,7 @@ export async function fetchAdminUsers(
   token: string,
   params?: { page?: number; limit?: number; role?: string; search?: string }
 ) {
-  const url = new URL(`${API_BASE_URL}/admin/users`);
+  const url = new URL(`${getApiBaseUrl()}/admin/users`);
   if (params?.page) url.searchParams.set("page", String(params.page));
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.role) url.searchParams.set("role", params.role);
@@ -289,7 +308,7 @@ export async function toggleUserLock(
 ) {
   const endpoint = lock ? "lock" : "unlock";
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/admin/users/${userId}/${endpoint}`,
+    `${getApiBaseUrl()}/admin/users/${userId}/${endpoint}`,
     { method: "PATCH" },
     token
   );
@@ -307,7 +326,7 @@ export async function createAdminUser(
   }
 ) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/admin/users`,
+    `${getApiBaseUrl()}/admin/users`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -330,7 +349,7 @@ export async function updateAdminUser(
   }
 ) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/admin/users/${userId}`,
+    `${getApiBaseUrl()}/admin/users/${userId}`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -343,7 +362,7 @@ export async function updateAdminUser(
 
 export async function deleteAdminUser(token: string, userId: string) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/admin/users/${userId}`,
+    `${getApiBaseUrl()}/admin/users/${userId}`,
     {
       method: "DELETE",
     },
@@ -360,7 +379,7 @@ export async function fetchCategories(
   token: string,
   params?: { page?: number; limit?: number; search?: string; all?: boolean }
 ) {
-  const url = new URL(`${API_BASE_URL}/categories`);
+  const url = new URL(`${getApiBaseUrl()}/categories`);
   if (params?.page) url.searchParams.set("page", String(params.page));
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.search) url.searchParams.set("search", params.search);
@@ -375,7 +394,7 @@ export async function createCategory(
   payload: { code: string; name: string }
 ) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/categories`,
+    `${getApiBaseUrl()}/categories`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -388,7 +407,7 @@ export async function createCategory(
 
 export async function deleteCategory(token: string, id: string) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/categories/${id}`,
+    `${getApiBaseUrl()}/categories/${id}`,
     { method: "DELETE" },
     token
   );
@@ -405,7 +424,7 @@ export async function fetchSubCategories(
     all?: boolean;
   }
 ) {
-  const url = new URL(`${API_BASE_URL}/sub-categories`);
+  const url = new URL(`${getApiBaseUrl()}/sub-categories`);
   if (params?.page) url.searchParams.set("page", String(params.page));
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.categoryId)
@@ -427,7 +446,7 @@ export async function createSubCategory(
   }
 ) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/sub-categories`,
+    `${getApiBaseUrl()}/sub-categories`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -440,7 +459,7 @@ export async function createSubCategory(
 
 export async function deleteSubCategory(token: string, id: string) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/sub-categories/${id}`,
+    `${getApiBaseUrl()}/sub-categories/${id}`,
     { method: "DELETE" },
     token
   );
@@ -463,7 +482,7 @@ export async function fetchIncomingItems(
     operatorId?: string;
   }
 ) {
-  const url = new URL(`${API_BASE_URL}/incoming-items`);
+  const url = new URL(`${getApiBaseUrl()}/incoming-items`);
   if (params?.page) url.searchParams.set("page", String(params.page));
   if (params?.limit) url.searchParams.set("limit", String(params.limit));
   if (params?.categoryId)
@@ -481,7 +500,7 @@ export async function fetchIncomingItems(
 
 export async function fetchIncomingItemSummary(token: string) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/incoming-items/stats/summary`,
+    `${getApiBaseUrl()}/incoming-items/stats/summary`,
     {},
     token
   );
@@ -490,7 +509,7 @@ export async function fetchIncomingItemSummary(token: string) {
 
 export async function fetchIncomingComboboxCategories(token: string) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/incoming-items/categories`,
+    `${getApiBaseUrl()}/incoming-items/categories`,
     {},
     token
   );
@@ -502,7 +521,7 @@ export async function fetchIncomingComboboxSubCategories(
   categoryId: string
 ) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/incoming-items/categories/${categoryId}/sub-categories`,
+    `${getApiBaseUrl()}/incoming-items/categories/${categoryId}/sub-categories`,
     {},
     token
   );
@@ -511,7 +530,7 @@ export async function fetchIncomingComboboxSubCategories(
 
 export async function fetchIncomingComboboxOperators(token: string) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/incoming-items/operators`,
+    `${getApiBaseUrl()}/incoming-items/operators`,
     {},
     token
   );
@@ -558,7 +577,7 @@ export async function createIncomingItem(
   if (payload.expiredDate) bodyData.expiredDate = payload.expiredDate;
 
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/incoming-items`,
+    `${getApiBaseUrl()}/incoming-items`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -571,7 +590,7 @@ export async function createIncomingItem(
 
 export async function deleteIncomingItem(token: string, id: string) {
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/incoming-items/${id}`,
+    `${getApiBaseUrl()}/incoming-items/${id}`,
     { method: "DELETE" },
     token
   );
@@ -583,7 +602,7 @@ export async function uploadIncomingAttachment(token: string, file: File) {
   formData.append("file", file);
 
   const res = await fetchWithAuth(
-    `${API_BASE_URL}/incoming-items/upload`,
+    `${getApiBaseUrl()}/incoming-items/upload`,
     {
       method: "POST",
       body: formData,

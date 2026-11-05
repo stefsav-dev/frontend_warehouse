@@ -61,7 +61,7 @@ import {
   useDeleteIncomingItem,
   useUploadAttachment,
 } from "@/hooks/use-incoming-query";
-import { API_BASE_URL } from "@/lib/api";
+import { getApiBaseUrl } from "@/lib/api";
 
 function formatRupiah(amount: number) {
   if (isNaN(amount) || amount === null || amount === undefined) return "Rp 0";
@@ -731,7 +731,7 @@ export default function OperatorPage() {
                             <TableCell>
                               {attachmentFileName ? (
                                 <a
-                                  href={`${API_BASE_URL}/uploads/${attachmentFileName}`}
+                                  href={`${getApiBaseUrl()}/uploads/${attachmentFileName}`}
                                   target="_blank"
                                   rel="noreferrer"
                                   className="text-blue-600 dark:text-blue-400 text-xs hover:underline flex items-center gap-1"

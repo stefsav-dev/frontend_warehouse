@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Package2, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Package2, Eye, EyeOff, Loader2, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLoginMutation } from "@/hooks/use-auth-query";
+import { getApiBaseUrl, setCustomApiUrl } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,6 +24,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [customUrl, setCustomUrl] = useState("");
+  const [currentApiUrl, setCurrentApiUrl] = useState("http://localhost:3001");
+
+  useEffect(() => {
+    const activeUrl = getApiBaseUrl();
+    setCurrentApiUrl(activeUrl);
+    setCustomUrl(activeUrl);
+  }, []);
 
   const loginMutation = useLoginMutation();
   const isSubmitting = loginMutation.isPending;
@@ -163,6 +174,70 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
+
+            {/* Pengaturan Cepat URL Server API */}
+            <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 text-center">
+              <button
+                type="button"
+                onClick={() => setShowServerConfig(!showServerConfig)}
+                className="text-xs text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 underline cursor-pointer inline-flex items-center gap-1.5"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+                {showServerConfig ? "Tutup Pengaturan Server" : "Atur URL Server API"}
+              </button>
+
+              {showServerConfig && (
+                <div className="mt-3 p-3 text-left rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 space-y-2">
+                  <div className="font-medium text-xs text-zinc-800 dark:text-zinc-200">
+                    Konfigurasi URL API Backend
+                  </div>
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Masukkan URL backend Railway Anda:
+                  </p>
+                  <Input
+                    type="url"
+                    placeholder="https://backend-anda.up.railway.app"
+                    value={customUrl}
+                    onChange={(e) => setCustomUrl(e.target.value)}
+                    className="h-8 text-xs font-mono"
+                  />
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-xs flex-1 cursor-pointer"
+                      onClick={() => {
+                        if (!customUrl.trim()) return;
+                        setCustomApiUrl(customUrl.trim());
+                        const updated = getApiBaseUrl();
+                        setCurrentApiUrl(updated);
+                        setErrorMessage(null);
+                      }}
+                    >
+                      Terapkan URL
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs cursor-pointer"
+                      onClick={() => {
+                        setCustomApiUrl(null);
+                        const resetUrl = getApiBaseUrl();
+                        setCurrentApiUrl(resetUrl);
+                        setCustomUrl(resetUrl);
+                        setErrorMessage(null);
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                  <div className="text-[10px] text-zinc-500 dark:text-zinc-400 pt-1 border-t border-zinc-200 dark:border-zinc-800 break-all">
+                    Tersambung ke: <span className="font-mono font-medium text-zinc-700 dark:text-zinc-300">{currentApiUrl}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
