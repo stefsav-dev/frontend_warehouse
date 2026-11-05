@@ -4,12 +4,20 @@
 
 export function getApiBaseUrl(): string {
   if (typeof window !== "undefined") {
-    const custom = localStorage.getItem("warehouse_api_url");
+    let custom = localStorage.getItem("warehouse_api_url");
     if (custom && custom.trim()) {
-      return custom.trim().replace(/\/+$/, "");
+      custom = custom.trim().replace(/\/+$/, "");
+      if (!/^https?:\/\//i.test(custom)) {
+        custom = `https://${custom}`;
+      }
+      return custom;
     }
   }
-  return (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/+$/, "");
+  let base = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(base) && !base.startsWith("localhost")) {
+    base = `https://${base}`;
+  }
+  return base;
 }
 
 export function setCustomApiUrl(url: string | null) {
@@ -17,7 +25,11 @@ export function setCustomApiUrl(url: string | null) {
     if (!url || !url.trim()) {
       localStorage.removeItem("warehouse_api_url");
     } else {
-      localStorage.setItem("warehouse_api_url", url.trim().replace(/\/+$/, ""));
+      let clean = url.trim().replace(/\/+$/, "");
+      if (!/^https?:\/\//i.test(clean)) {
+        clean = `https://${clean}`;
+      }
+      localStorage.setItem("warehouse_api_url", clean);
     }
   }
 }

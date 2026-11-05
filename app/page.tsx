@@ -211,6 +211,7 @@ export default function LoginPage() {
                         setCustomApiUrl(customUrl.trim());
                         const updated = getApiBaseUrl();
                         setCurrentApiUrl(updated);
+                        setCustomUrl(updated);
                         setErrorMessage(null);
                       }}
                     >
