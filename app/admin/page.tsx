@@ -69,15 +69,23 @@ import {
   useDeleteUser,
   useCategories,
   useCreateCategory,
+  useUpdateCategory,
   useDeleteCategory,
   useSubCategories,
   useCreateSubCategory,
+  useUpdateSubCategory,
   useDeleteSubCategory,
 } from "@/hooks/use-admin-query";
 import {
   useIncomingItems,
   useIncomingItemSummary,
+  useUpdateIncomingItem,
+  useDeleteIncomingItem,
+  useComboboxOperators,
+  useComboboxCategories,
+  useComboboxSubCategories,
 } from "@/hooks/use-incoming-query";
+import { DatePicker } from "@/components/ui/date-picker";
 import { getApiBaseUrl } from "@/lib/api";
 
 function formatRupiah(amount: number) {
@@ -132,12 +140,15 @@ export default function AdminPage() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [isAddCatOpen, setIsAddCatOpen] = useState(false);
+  const [isEditCatOpen, setIsEditCatOpen] = useState(false);
   const [isAddSubCatOpen, setIsAddSubCatOpen] = useState(false);
+  const [isEditSubCatOpen, setIsEditSubCatOpen] = useState(false);
+  const [isEditItemOpen, setIsEditItemOpen] = useState(false);
 
   // Delete Confirmation Modal State
   const [deleteModalState, setDeleteModalState] = useState<{
     isOpen: boolean;
-    type: "user" | "category" | "subcategory";
+    type: "user" | "category" | "subcategory" | "item";
     id: string;
     title: string;
     description: string;
@@ -154,7 +165,10 @@ export default function AdminPage() {
   const [userModalError, setUserModalError] = useState<string | null>(null);
   const [editUserModalError, setEditUserModalError] = useState<string | null>(null);
   const [catModalError, setCatModalError] = useState<string | null>(null);
+  const [editCatModalError, setEditCatModalError] = useState<string | null>(null);
   const [subCatModalError, setSubCatModalError] = useState<string | null>(null);
+  const [editSubCatModalError, setEditSubCatModalError] = useState<string | null>(null);
+  const [editItemModalError, setEditItemModalError] = useState<string | null>(null);
 
   // Toggle lihat password di modal tambah user & edit user
   const [showUserPassword, setShowUserPassword] = useState(false);
@@ -177,11 +191,33 @@ export default function AdminPage() {
     password: "",
   });
   const [newCatData, setNewCatData] = useState({ code: "", name: "" });
+  const [editCatData, setEditCatData] = useState({ id: "", code: "", name: "" });
   const [newSubCatData, setNewSubCatData] = useState({
     categoryId: "",
     code: "",
     name: "",
     priceLimit: 0,
+  });
+  const [editSubCatData, setEditSubCatData] = useState({
+    id: "",
+    categoryId: "",
+    code: "",
+    name: "",
+    priceLimit: 0,
+  });
+  const [editItemData, setEditItemData] = useState({
+    id: "",
+    operatorId: "",
+    categoryId: "",
+    subCategoryId: "",
+    itemOrigin: "",
+    letterNumber: "",
+    itemName: "",
+    price: 0,
+    quantity: 1,
+    unit: "Buah",
+    expiredDate: "",
+    incomingDate: "",
   });
 
   const [feedback, setFeedback] = useState<{
@@ -234,14 +270,26 @@ export default function AdminPage() {
   const updateUserMutation = useUpdateUser(token);
   const deleteUserMutation = useDeleteUser(token);
   const createCatMutation = useCreateCategory(token);
+  const updateCatMutation = useUpdateCategory(token);
   const deleteCatMutation = useDeleteCategory(token);
   const createSubCatMutation = useCreateSubCategory(token);
+  const updateSubCatMutation = useUpdateSubCategory(token);
   const deleteSubCatMutation = useDeleteSubCategory(token);
+  const updateItemMutation = useUpdateIncomingItem(token);
+  const deleteItemMutation = useDeleteIncomingItem(token);
+
+  const { data: operatorsData } = useComboboxOperators(token);
+  const { data: comboboxCategories } = useComboboxCategories(token);
+  const { data: comboboxSubCategories } = useComboboxSubCategories(
+    token,
+    editItemData.categoryId || undefined
+  );
 
   const isDeleting =
     deleteUserMutation.isPending ||
     deleteCatMutation.isPending ||
-    deleteSubCatMutation.isPending;
+    deleteSubCatMutation.isPending ||
+    deleteItemMutation.isPending;
 
   if (isSessionLoading || !session) {
     return (
@@ -438,6 +486,22 @@ export default function AdminPage() {
     });
   };
 
+  const handleOpenDeleteItem = (item: any) => {
+    setDeleteModalState({
+      isOpen: true,
+      type: "item",
+      id: item.id,
+      title: "Hapus Barang Masuk",
+      description: `Apakah Anda yakin ingin menghapus catatan barang masuk '${item.itemName}'?`,
+      detail: [
+        { label: "Nama Barang", value: item.itemName },
+        { label: "Jumlah", value: `${item.quantity} ${item.unit || "Buah"}` },
+        { label: "Harga Satuan", value: formatRupiah(Number(item.price || 0)) },
+        { label: "Tanggal Masuk", value: item.incomingDate || "-" },
+      ],
+    });
+  };
+
   const handleConfirmDelete = () => {
     if (!deleteModalState.id) return;
 
@@ -513,7 +577,248 @@ export default function AdminPage() {
           });
         },
       });
+    } else if (deleteModalState.type === "item") {
+      deleteItemMutation.mutate(deleteModalState.id, {
+        onSuccess: (res: any) => {
+          setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+          if (res.success) {
+            setFeedback({
+              type: "success",
+              text: res.message || "Data barang masuk berhasil dihapus.",
+            });
+          } else {
+            setFeedback({
+              type: "error",
+              text: res.message || "Gagal menghapus data barang masuk.",
+            });
+          }
+        },
+        onError: (err: any) => {
+          setDeleteModalState((prev) => ({ ...prev, isOpen: false }));
+          setFeedback({
+            type: "error",
+            text: err.message || "Terjadi kesalahan saat menghapus data barang masuk.",
+          });
+        },
+      });
     }
+  };
+
+  const handleOpenEditCategory = (c: any) => {
+    setEditCatModalError(null);
+    setEditCatData({
+      id: c.id,
+      code: c.code || "",
+      name: c.name || "",
+    });
+    setIsEditCatOpen(true);
+  };
+
+  const handleUpdateCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditCatModalError(null);
+
+    if (!editCatData.code.trim()) {
+      setEditCatModalError("Kode kategori wajib diisi.");
+      return;
+    }
+    if (!editCatData.name.trim()) {
+      setEditCatModalError("Nama kategori wajib diisi.");
+      return;
+    }
+
+    updateCatMutation.mutate(
+      {
+        id: editCatData.id,
+        payload: {
+          code: editCatData.code.trim().toUpperCase(),
+          name: editCatData.name.trim(),
+        },
+      },
+      {
+        onSuccess: (res: any) => {
+          if (res.success) {
+            setIsEditCatOpen(false);
+            setEditCatModalError(null);
+            setFeedback({
+              type: "success",
+              text: `Kategori '${editCatData.name}' berhasil diperbarui.`,
+            });
+          } else {
+            setEditCatModalError(res.message || "Gagal memperbarui kategori.");
+          }
+        },
+        onError: (err: Error) => {
+          setEditCatModalError(
+            err.message || "Terjadi kesalahan saat memperbarui kategori."
+          );
+        },
+      }
+    );
+  };
+
+  const handleOpenEditSubCategory = (sc: any) => {
+    setEditSubCatModalError(null);
+    setEditSubCatData({
+      id: sc.id,
+      categoryId: sc.categoryId || sc.category?.id || "",
+      code: sc.code || "",
+      name: sc.name || "",
+      priceLimit: Number(sc.priceLimit || 0),
+    });
+    setIsEditSubCatOpen(true);
+  };
+
+  const handleUpdateSubCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditSubCatModalError(null);
+
+    if (!editSubCatData.categoryId) {
+      setEditSubCatModalError("Kategori induk wajib dipilih.");
+      return;
+    }
+    if (!editSubCatData.code.trim()) {
+      setEditSubCatModalError("Kode sub kategori wajib diisi.");
+      return;
+    }
+    if (!editSubCatData.name.trim()) {
+      setEditSubCatModalError("Nama sub kategori wajib diisi.");
+      return;
+    }
+    if (Number(editSubCatData.priceLimit) <= 0) {
+      setEditSubCatModalError("Batas harga satuan wajib lebih dari Rp 0.");
+      return;
+    }
+
+    updateSubCatMutation.mutate(
+      {
+        id: editSubCatData.id,
+        payload: {
+          categoryId: editSubCatData.categoryId,
+          code: editSubCatData.code.trim().toUpperCase(),
+          name: editSubCatData.name.trim(),
+          priceLimit: Number(editSubCatData.priceLimit),
+        },
+      },
+      {
+        onSuccess: (res: any) => {
+          if (res.success) {
+            setIsEditSubCatOpen(false);
+            setEditSubCatModalError(null);
+            setFeedback({
+              type: "success",
+              text: `Sub kategori '${editSubCatData.name}' berhasil diperbarui.`,
+            });
+          } else {
+            setEditSubCatModalError(res.message || "Gagal memperbarui sub kategori.");
+          }
+        },
+        onError: (err: Error) => {
+          setEditSubCatModalError(
+            err.message || "Terjadi kesalahan saat memperbarui sub kategori."
+          );
+        },
+      }
+    );
+  };
+
+  const handleOpenEditItem = (it: any) => {
+    setEditItemModalError(null);
+    setEditItemData({
+      id: it.id,
+      operatorId: it.operator?.id || it.operatorId || "",
+      categoryId: it.category?.id || it.categoryId || "",
+      subCategoryId: it.subCategory?.id || it.subCategoryId || "",
+      itemOrigin: it.itemOrigin || "",
+      letterNumber: it.letterNumber || "",
+      itemName: it.itemName || "",
+      price: Number(it.price ?? it.itemPrice ?? 0),
+      quantity: Number(it.quantity || 1),
+      unit: it.unit || "Buah",
+      expiredDate: it.expiredDate || "",
+      incomingDate: it.incomingDate || new Date().toISOString().split("T")[0],
+    });
+    setIsEditItemOpen(true);
+  };
+
+  const handleUpdateItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    setEditItemModalError(null);
+
+    if (!editItemData.itemName.trim()) {
+      setEditItemModalError("Nama barang tidak boleh kosong.");
+      return;
+    }
+    if (!editItemData.itemOrigin.trim()) {
+      setEditItemModalError("Asal barang wajib diisi.");
+      return;
+    }
+    if (!editItemData.categoryId) {
+      setEditItemModalError("Kategori wajib dipilih.");
+      return;
+    }
+    if (!editItemData.subCategoryId) {
+      setEditItemModalError("Sub kategori wajib dipilih.");
+      return;
+    }
+    if (Number(editItemData.price) <= 0) {
+      setEditItemModalError("Harga satuan harus lebih dari Rp 0.");
+      return;
+    }
+    if (Number(editItemData.quantity) < 1) {
+      setEditItemModalError("Jumlah barang minimal 1.");
+      return;
+    }
+
+    const selectedSub = comboboxSubCategories?.data?.find(
+      (s: any) => s.id === editItemData.subCategoryId
+    );
+    if (selectedSub && Number(selectedSub.priceLimit) > 0) {
+      if (Number(editItemData.price) > Number(selectedSub.priceLimit)) {
+        setEditItemModalError(
+          `Harga satuan (${formatRupiah(Number(editItemData.price))}) melebihi batas harga sub kategori (${formatRupiah(Number(selectedSub.priceLimit))}).`
+        );
+        return;
+      }
+    }
+
+    updateItemMutation.mutate(
+      {
+        id: editItemData.id,
+        payload: {
+          operatorId: editItemData.operatorId || undefined,
+          categoryId: editItemData.categoryId,
+          subCategoryId: editItemData.subCategoryId,
+          itemOrigin: editItemData.itemOrigin.trim(),
+          letterNumber: editItemData.letterNumber.trim() || undefined,
+          itemName: editItemData.itemName.trim(),
+          price: Number(editItemData.price),
+          quantity: Number(editItemData.quantity),
+          unit: editItemData.unit.trim() || "Buah",
+          expiredDate: editItemData.expiredDate || null,
+          incomingDate: editItemData.incomingDate,
+        },
+      },
+      {
+        onSuccess: (res: any) => {
+          if (res.success) {
+            setIsEditItemOpen(false);
+            setEditItemModalError(null);
+            setFeedback({
+              type: "success",
+              text: `Data barang masuk '${editItemData.itemName}' berhasil diperbarui.`,
+            });
+          } else {
+            setEditItemModalError(res.message || "Gagal memperbarui barang masuk.");
+          }
+        },
+        onError: (err: Error) => {
+          setEditItemModalError(
+            err.message || "Terjadi kesalahan saat memperbarui barang masuk."
+          );
+        },
+      }
+    );
   };
 
   const handleCreateCategory = (e: React.FormEvent) => {
@@ -1133,15 +1438,26 @@ export default function AdminPage() {
                               : "-"}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                              onClick={() => handleOpenDeleteCategory(c)}
-                              title="Hapus Kategori"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                onClick={() => handleOpenEditCategory(c)}
+                                title="Ubah Kategori"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                onClick={() => handleOpenDeleteCategory(c)}
+                                title="Hapus Kategori"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1220,21 +1536,32 @@ export default function AdminPage() {
                           <TableCell className="font-mono font-medium">{sc.code}</TableCell>
                           <TableCell>{sc.name}</TableCell>
                           <TableCell className="text-zinc-500">
-                            {sc.categoryName || "-"}
+                            {sc.category?.name || sc.categoryName || "-"}
                           </TableCell>
                           <TableCell className="font-medium text-emerald-600">
                             {formatRupiah(Number(sc.priceLimit || 0))}
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                              onClick={() => handleOpenDeleteSubCategory(sc)}
-                              title="Hapus Sub Kategori"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                onClick={() => handleOpenEditSubCategory(sc)}
+                                title="Ubah Sub Kategori"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                onClick={() => handleOpenDeleteSubCategory(sc)}
+                                title="Hapus Sub Kategori"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1366,12 +1693,13 @@ export default function AdminPage() {
 
                       <TableHead>Operator</TableHead>
                       <TableHead>Lampiran</TableHead>
+                      <TableHead className="text-right">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {sortedItems.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-6 text-zinc-500">
+                        <TableCell colSpan={8} className="text-center py-6 text-zinc-500">
                           Belum ada catatan barang masuk.
                         </TableCell>
                       </TableRow>
@@ -1418,6 +1746,28 @@ export default function AdminPage() {
                               ) : (
                                 <span className="text-zinc-400 text-[11px]">-</span>
                               )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+                                  onClick={() => handleOpenEditItem(item)}
+                                  title="Ubah Barang Masuk"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                  onClick={() => handleOpenDeleteItem(item)}
+                                  title="Hapus Barang Masuk"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -1929,6 +2279,478 @@ export default function AdminPage() {
                 disabled={createSubCatMutation.isPending}
               >
                 {createSubCatMutation.isPending ? "Menyimpan..." : "Simpan Sub Kategori"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: Ubah Kategori */}
+      <Dialog open={isEditCatOpen} onOpenChange={setIsEditCatOpen}>
+        <DialogContent>
+          <form onSubmit={handleUpdateCategory}>
+            <DialogHeader>
+              <DialogTitle>Ubah Data Kategori</DialogTitle>
+              <DialogDescription>
+                Perbarui kode atau nama klasifikasi kategori barang.
+              </DialogDescription>
+            </DialogHeader>
+
+            {editCatModalError && (
+              <Alert variant="destructive" className="py-2.5 text-xs flex items-center justify-between my-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <AlertDescription>{editCatModalError}</AlertDescription>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditCatModalError(null)}
+                  className="text-xs underline text-rose-300 hover:text-white cursor-pointer ml-2 shrink-0"
+                >
+                  Tutup
+                </button>
+              </Alert>
+            )}
+            <div className="space-y-3 py-3">
+              <div className="space-y-1">
+                <Label htmlFor="edit-cat-code" className="text-xs">
+                  Kode Kategori
+                </Label>
+                <Input
+                  id="edit-cat-code"
+                  placeholder="Contoh: KAT-01"
+                  value={editCatData.code}
+                  onChange={(e) =>
+                    setEditCatData({ ...editCatData, code: e.target.value })
+                  }
+                  className="h-8 text-xs font-mono"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-cat-name" className="text-xs">
+                  Nama Kategori
+                </Label>
+                <Input
+                  id="edit-cat-name"
+                  placeholder="Contoh: Elektronik & Gadget"
+                  value={editCatData.name}
+                  onChange={(e) =>
+                    setEditCatData({ ...editCatData, name: e.target.value })
+                  }
+                  className="h-8 text-xs"
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setIsEditCatOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-8 text-xs"
+                disabled={updateCatMutation.isPending}
+              >
+                {updateCatMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: Ubah Sub Kategori */}
+      <Dialog open={isEditSubCatOpen} onOpenChange={setIsEditSubCatOpen}>
+        <DialogContent>
+          <form onSubmit={handleUpdateSubCategory}>
+            <DialogHeader>
+              <DialogTitle>Ubah Sub Kategori</DialogTitle>
+              <DialogDescription>
+                Perbarui informasi sub kategori, kategori induk, dan batas pagu harga satuan.
+              </DialogDescription>
+            </DialogHeader>
+
+            {editSubCatModalError && (
+              <Alert variant="destructive" className="py-2.5 text-xs flex items-center justify-between my-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <AlertDescription>{editSubCatModalError}</AlertDescription>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditSubCatModalError(null)}
+                  className="text-xs underline text-rose-300 hover:text-white cursor-pointer ml-2 shrink-0"
+                >
+                  Tutup
+                </button>
+              </Alert>
+            )}
+            <div className="space-y-3 py-3">
+              <div className="space-y-1">
+                <Label htmlFor="edit-sub-cat" className="text-xs">
+                  Kategori Induk
+                </Label>
+                <select
+                  id="edit-sub-cat"
+                  value={editSubCatData.categoryId}
+                  onChange={(e) =>
+                    setEditSubCatData({ ...editSubCatData, categoryId: e.target.value })
+                  }
+                  className="w-full h-8 px-2 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer"
+                  required
+                >
+                  <option value="">Pilih Kategori Induk</option>
+                  {allCategories?.data?.map((cat: any) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.code} - {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-sub-code" className="text-xs">
+                  Kode Sub Kategori
+                </Label>
+                <Input
+                  id="edit-sub-code"
+                  placeholder="Contoh: SUB-01"
+                  value={editSubCatData.code}
+                  onChange={(e) =>
+                    setEditSubCatData({ ...editSubCatData, code: e.target.value })
+                  }
+                  className="h-8 text-xs font-mono"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-sub-name" className="text-xs">
+                  Nama Sub Kategori
+                </Label>
+                <Input
+                  id="edit-sub-name"
+                  placeholder="Contoh: Komputer & Laptop"
+                  value={editSubCatData.name}
+                  onChange={(e) =>
+                    setEditSubCatData({ ...editSubCatData, name: e.target.value })
+                  }
+                  className="h-8 text-xs"
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="edit-sub-limit" className="text-xs">
+                  Batas Harga Maksimum Satuan (Rp)
+                </Label>
+                <Input
+                  id="edit-sub-limit"
+                  type="number"
+                  placeholder="Contoh: 25000000"
+                  value={editSubCatData.priceLimit || ""}
+                  onChange={(e) =>
+                    setEditSubCatData({
+                      ...editSubCatData,
+                      priceLimit: Number(e.target.value),
+                    })
+                  }
+                  className="h-8 text-xs"
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setIsEditSubCatOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-8 text-xs"
+                disabled={updateSubCatMutation.isPending}
+              >
+                {updateSubCatMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* MODAL: Ubah Barang Masuk */}
+      <Dialog open={isEditItemOpen} onOpenChange={setIsEditItemOpen}>
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+          <form onSubmit={handleUpdateItem}>
+            <DialogHeader>
+              <DialogTitle>Ubah Data Barang Masuk</DialogTitle>
+              <DialogDescription>
+                Perbarui informasi transaksi barang masuk inventaris gudang.
+              </DialogDescription>
+            </DialogHeader>
+
+            {editItemModalError && (
+              <Alert variant="destructive" className="py-2.5 text-xs flex items-center justify-between my-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <AlertDescription>{editItemModalError}</AlertDescription>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditItemModalError(null)}
+                  className="text-xs underline text-rose-300 hover:text-white cursor-pointer ml-2 shrink-0"
+                >
+                  Tutup
+                </button>
+              </Alert>
+            )}
+
+            <div className="space-y-3 py-3 text-xs">
+              {/* Row 1: Operator & Asal Barang */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-operator" className="text-xs">
+                    Operator Pencatat
+                  </Label>
+                  <select
+                    id="edit-item-operator"
+                    value={editItemData.operatorId}
+                    onChange={(e) =>
+                      setEditItemData({ ...editItemData, operatorId: e.target.value })
+                    }
+                    className="w-full h-8 px-2 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer"
+                  >
+                    <option value="">Pilih Operator...</option>
+                    {operatorsData?.data?.map((op: any) => (
+                      <option key={op.id} value={op.id}>
+                        {op.name} ({op.username})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-origin" className="text-xs">
+                    Asal Barang
+                  </Label>
+                  <Input
+                    id="edit-item-origin"
+                    placeholder="Contoh: PT Sumber Makmur"
+                    value={editItemData.itemOrigin}
+                    onChange={(e) =>
+                      setEditItemData({ ...editItemData, itemOrigin: e.target.value })
+                    }
+                    className="h-8 text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Kategori & Sub Kategori */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-cat" className="text-xs">
+                    Kategori
+                  </Label>
+                  <select
+                    id="edit-item-cat"
+                    value={editItemData.categoryId}
+                    onChange={(e) => {
+                      setEditItemData({
+                        ...editItemData,
+                        categoryId: e.target.value,
+                        subCategoryId: "",
+                      });
+                    }}
+                    className="w-full h-8 px-2 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer"
+                    required
+                  >
+                    <option value="">Pilih Kategori...</option>
+                    {allCategories?.data?.map((cat: any) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.code} - {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-subcat" className="text-xs">
+                    Sub Kategori
+                  </Label>
+                  <select
+                    id="edit-item-subcat"
+                    value={editItemData.subCategoryId}
+                    onChange={(e) =>
+                      setEditItemData({ ...editItemData, subCategoryId: e.target.value })
+                    }
+                    className="w-full h-8 px-2 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 cursor-pointer"
+                    required
+                  >
+                    <option value="">Pilih Sub Kategori...</option>
+                    {comboboxSubCategories?.data?.map((sub: any) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.code || "-"} {sub.name} (Max {formatRupiah(sub.priceLimit)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Row 3: Nama Barang & Nomor Surat */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-name" className="text-xs">
+                    Nama Barang
+                  </Label>
+                  <Input
+                    id="edit-item-name"
+                    placeholder="Contoh: Kertas HVS A4 80gr"
+                    value={editItemData.itemName}
+                    onChange={(e) =>
+                      setEditItemData({ ...editItemData, itemName: e.target.value })
+                    }
+                    className="h-8 text-xs"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-letter" className="text-xs">
+                    Nomor Surat / Faktur (Opsional)
+                  </Label>
+                  <Input
+                    id="edit-item-letter"
+                    placeholder="Contoh: SJ-2026/001"
+                    value={editItemData.letterNumber}
+                    onChange={(e) =>
+                      setEditItemData({ ...editItemData, letterNumber: e.target.value })
+                    }
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: Harga Satuan, Jumlah, Satuan */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-price" className="text-xs">
+                    Harga Satuan (Rp)
+                  </Label>
+                  <Input
+                    id="edit-item-price"
+                    type="number"
+                    min="0"
+                    placeholder="55000"
+                    value={editItemData.price || ""}
+                    onChange={(e) =>
+                      setEditItemData({
+                        ...editItemData,
+                        price: Number(e.target.value),
+                      })
+                    }
+                    className="h-8 text-xs font-mono"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-qty" className="text-xs">
+                    Jumlah
+                  </Label>
+                  <Input
+                    id="edit-item-qty"
+                    type="number"
+                    min="1"
+                    value={editItemData.quantity}
+                    onChange={(e) =>
+                      setEditItemData({
+                        ...editItemData,
+                        quantity: Number(e.target.value),
+                      })
+                    }
+                    className="h-8 text-xs"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="edit-item-unit" className="text-xs">
+                    Satuan
+                  </Label>
+                  <Input
+                    id="edit-item-unit"
+                    placeholder="Buah, Rim, Box..."
+                    value={editItemData.unit}
+                    onChange={(e) =>
+                      setEditItemData({ ...editItemData, unit: e.target.value })
+                    }
+                    className="h-8 text-xs"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Row 5: Total Akumulasi (Readonly) */}
+              <div className="p-2.5 rounded bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+                <span className="text-zinc-500 text-xs">Total Harga:</span>
+                <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">
+                  {formatRupiah((editItemData.price || 0) * (editItemData.quantity || 1))}
+                </span>
+              </div>
+
+              {/* Row 6: Tgl Expired & Tgl Masuk */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Tanggal Kedaluwarsa (Opsional)</Label>
+                  <DatePicker
+                    value={editItemData.expiredDate}
+                    onChange={(val) =>
+                      setEditItemData({ ...editItemData, expiredDate: val })
+                    }
+                    placeholder="Pilih tgl expired..."
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Tanggal Masuk</Label>
+                  <DatePicker
+                    value={editItemData.incomingDate}
+                    onChange={(val) =>
+                      setEditItemData({ ...editItemData, incomingDate: val })
+                    }
+                    placeholder="Pilih tgl masuk..."
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setIsEditItemOpen(false)}
+              >
+                Batal
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                className="h-8 text-xs"
+                disabled={updateItemMutation.isPending}
+              >
+                {updateItemMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
               </Button>
             </DialogFooter>
           </form>

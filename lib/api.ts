@@ -417,6 +417,23 @@ export async function createCategory(
   return await safeJson(res);
 }
 
+export async function updateCategory(
+  token: string,
+  id: string,
+  payload: { code?: string; name?: string }
+) {
+  const res = await fetchWithAuth(
+    `${getApiBaseUrl()}/categories/${id}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    token
+  );
+  return await safeJson(res);
+}
+
 export async function deleteCategory(token: string, id: string) {
   const res = await fetchWithAuth(
     `${getApiBaseUrl()}/categories/${id}`,
@@ -461,6 +478,28 @@ export async function createSubCategory(
     `${getApiBaseUrl()}/sub-categories`,
     {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    token
+  );
+  return await safeJson(res);
+}
+
+export async function updateSubCategory(
+  token: string,
+  id: string,
+  payload: {
+    categoryId?: string;
+    code?: string;
+    name?: string;
+    priceLimit?: number;
+  }
+) {
+  const res = await fetchWithAuth(
+    `${getApiBaseUrl()}/sub-categories/${id}`,
+    {
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     },
@@ -594,6 +633,37 @@ export async function createIncomingItem(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(bodyData),
+    },
+    token
+  );
+  return await safeJson(res);
+}
+
+export async function updateIncomingItem(
+  token: string,
+  id: string,
+  payload: {
+    operatorId?: string;
+    categoryId?: string;
+    subCategoryId?: string;
+    itemOrigin?: string;
+    letterNumber?: string;
+    attachment?: string | null;
+    attachmentOriginalName?: string | null;
+    itemName?: string;
+    price?: number;
+    quantity?: number;
+    unit?: string;
+    expiredDate?: string | null;
+    incomingDate?: string;
+  }
+) {
+  const res = await fetchWithAuth(
+    `${getApiBaseUrl()}/incoming-items/${id}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     },
     token
   );

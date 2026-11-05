@@ -8,6 +8,7 @@ import {
   fetchIncomingComboboxSubCategories,
   fetchIncomingComboboxOperators,
   createIncomingItem,
+  updateIncomingItem,
   deleteIncomingItem,
   uploadIncomingAttachment,
 } from "@/lib/api";
@@ -83,6 +84,36 @@ export function useCreateIncomingItem(token?: string) {
       operatorId?: string;
       expiredDate?: string | null;
     }) => createIncomingItem(token!, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["incoming-items"] });
+    },
+  });
+}
+
+export function useUpdateIncomingItem(token?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: {
+        operatorId?: string;
+        categoryId?: string;
+        subCategoryId?: string;
+        itemOrigin?: string;
+        letterNumber?: string;
+        attachment?: string | null;
+        attachmentOriginalName?: string | null;
+        itemName?: string;
+        price?: number;
+        quantity?: number;
+        unit?: string;
+        expiredDate?: string | null;
+        incomingDate?: string;
+      };
+    }) => updateIncomingItem(token!, id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incoming-items"] });
     },

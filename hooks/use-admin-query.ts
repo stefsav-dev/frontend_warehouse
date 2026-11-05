@@ -10,9 +10,11 @@ import {
   deleteAdminUser,
   fetchCategories,
   createCategory,
+  updateCategory,
   deleteCategory,
   fetchSubCategories,
   createSubCategory,
+  updateSubCategory,
   deleteSubCategory,
 } from "@/lib/api";
 
@@ -120,6 +122,23 @@ export function useCreateCategory(token?: string) {
   });
 }
 
+export function useUpdateCategory(token?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: { code?: string; name?: string };
+    }) => updateCategory(token!, id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
+      queryClient.invalidateQueries({ queryKey: ["incoming-items"] });
+    },
+  });
+}
+
 export function useDeleteCategory(token?: string) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -158,6 +177,28 @@ export function useCreateSubCategory(token?: string) {
     }) => createSubCategory(token!, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sub-categories"] });
+    },
+  });
+}
+
+export function useUpdateSubCategory(token?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: {
+        categoryId?: string;
+        code?: string;
+        name?: string;
+        priceLimit?: number;
+      };
+    }) => updateSubCategory(token!, id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sub-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["incoming-items"] });
     },
   });
 }
