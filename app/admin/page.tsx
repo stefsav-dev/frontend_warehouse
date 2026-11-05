@@ -2246,20 +2246,36 @@ export default function AdminPage() {
                 <Label htmlFor="sub-limit" className="text-xs">
                   Batas Harga Maksimum Satuan (Rp)
                 </Label>
-                <Input
-                  id="sub-limit"
-                  type="number"
-                  placeholder="Contoh: 25000000"
-                  value={newSubCatData.priceLimit || ""}
-                  onChange={(e) =>
-                    setNewSubCatData({
-                      ...newSubCatData,
-                      priceLimit: Number(e.target.value),
-                    })
-                  }
-                  className="h-8 text-xs"
-                  required
-                />
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-xs text-zinc-400 font-medium select-none pointer-events-none">
+                    Rp
+                  </span>
+                  <Input
+                    id="sub-limit"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={
+                      newSubCatData.priceLimit
+                        ? new Intl.NumberFormat("id-ID").format(Number(newSubCatData.priceLimit))
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      setNewSubCatData({
+                        ...newSubCatData,
+                        priceLimit: raw === "" ? 0 : Number(raw),
+                      });
+                    }}
+                    className="h-8 text-xs pl-8 font-medium"
+                    required
+                  />
+                </div>
+                {Number(newSubCatData.priceLimit) > 0 && (
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Terformat: {formatRupiah(Number(newSubCatData.priceLimit))}
+                  </p>
+                )}
               </div>
             </div>
             <DialogFooter>
@@ -2448,20 +2464,36 @@ export default function AdminPage() {
                 <Label htmlFor="edit-sub-limit" className="text-xs">
                   Batas Harga Maksimum Satuan (Rp)
                 </Label>
-                <Input
-                  id="edit-sub-limit"
-                  type="number"
-                  placeholder="Contoh: 25000000"
-                  value={editSubCatData.priceLimit || ""}
-                  onChange={(e) =>
-                    setEditSubCatData({
-                      ...editSubCatData,
-                      priceLimit: Number(e.target.value),
-                    })
-                  }
-                  className="h-8 text-xs"
-                  required
-                />
+                <div className="relative">
+                  <span className="absolute left-2.5 top-2 text-xs text-zinc-400 font-medium select-none pointer-events-none">
+                    Rp
+                  </span>
+                  <Input
+                    id="edit-sub-limit"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={
+                      editSubCatData.priceLimit
+                        ? new Intl.NumberFormat("id-ID").format(Number(editSubCatData.priceLimit))
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      setEditSubCatData({
+                        ...editSubCatData,
+                        priceLimit: raw === "" ? 0 : Number(raw),
+                      });
+                    }}
+                    className="h-8 text-xs pl-8 font-medium"
+                    required
+                  />
+                </div>
+                {Number(editSubCatData.priceLimit) > 0 && (
+                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    Terformat: {formatRupiah(Number(editSubCatData.priceLimit))}
+                  </p>
+                )}
               </div>
             </div>
             <DialogFooter>
@@ -2646,21 +2678,31 @@ export default function AdminPage() {
                   <Label htmlFor="edit-item-price" className="text-xs">
                     Harga Satuan (Rp)
                   </Label>
-                  <Input
-                    id="edit-item-price"
-                    type="number"
-                    min="0"
-                    placeholder="55000"
-                    value={editItemData.price || ""}
-                    onChange={(e) =>
-                      setEditItemData({
-                        ...editItemData,
-                        price: Number(e.target.value),
-                      })
-                    }
-                    className="h-8 text-xs font-mono"
-                    required
-                  />
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-2 text-xs text-zinc-400 font-medium select-none pointer-events-none">
+                      Rp
+                    </span>
+                    <Input
+                      id="edit-item-price"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={
+                        editItemData.price
+                          ? new Intl.NumberFormat("id-ID").format(Number(editItemData.price))
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        setEditItemData({
+                          ...editItemData,
+                          price: raw === "" ? 0 : Number(raw),
+                        });
+                      }}
+                      className="h-8 text-xs pl-8 font-medium"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-1">
